@@ -1,112 +1,120 @@
- #!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+conda activate geo_env
 
-Get coral locations for fine MUR grid as defined.
+This code came from Phil Broderick strategy he described in 2022/2/03 email.
 
-Based on coral_locations.py
+The shapefile (and generated raster files) are in:
+/raid8/pkalmus/data/coral/data/location/14_001_WCMC008_CoralReefs2018_v4_1/01_Data
 
-Read in sample MUR ds.
-Make a new ds with lat, lon, time, and mask.
-For each element where mask is ocean or coast, check for a reef location.
-Make a new variable  called "reef_mask" where 1 means it has a reef, 0 if not.
 
-Make a plot from this file to test. (Read it in and use the xarray plotter).
+To create the .tif file:
+gdal_rasterize WCMC008_CoralReef2018_Py_v4_1.shp output1km.tif -te -180.005 -34.305 179.995 32.525 -tr 0.01 0.01 -burn 1
+(125479, 2)
 
-Created on Wed Sep  4 12:29:02 2019
+all touched:
+gdal_rasterize WCMC008_CoralReef2018_Py_v4_1.shp output1at.tif -tr 0.01 0.01 -burn 1 -at
+(421207, 2)
+
+Also, note that the gdal_rasterize step could probably also be done within this .py script
+using osgeo.gdal.RasterizeLayer, which also has options like 'ALL_TOUCHED=TRUE'
+
+
+Questions:
+    1. Do I need -at (all touched)? Why so many fewer than Adele (150K vs. 250K)?
+    2. Can I rasterize onto the MUR grid directly? 
+
+
+(geo_env) [pkalmus@weather2 01_Data]$ ogrinfo -so WCMC008_CoralReef2018_Py_v4_1.shp WCMC008_CoralReef2018_Py_v4_1
+INFO: Open of `WCMC008_CoralReef2018_Py_v4_1.shp'
+      using driver `ESRI Shapefile' successful.
+
+Layer name: WCMC008_CoralReef2018_Py_v4_1
+Metadata:
+  DBF_DATE_LAST_UPDATE=2021-03-30
+Geometry: Polygon
+Feature Count: 17504
+Extent: (-179.999935, -34.298230) - (179.999936, 32.514818)
+Layer SRS WKT:
+GEOGCS["WGS 84",
+    DATUM["WGS_1984",
+        SPHEROID["WGS 84",6378137,298.257223563,
+            AUTHORITY["EPSG","7030"]],
+        AUTHORITY["EPSG","6326"]],
+    PRIMEM["Greenwich",0,
+        AUTHORITY["EPSG","8901"]],
+    UNIT["degree",0.0174532925199433,
+        AUTHORITY["EPSG","9122"]],
+    AUTHORITY["EPSG","4326"]]
 
 @author: pkalmus
 """
 
-import matplotlib.pyplot as plt
-import xarray as xr
-import pdb
-from sklearn.utils.extmath import cartesian
 
-#from mpl_toolkits.basemap import Basemap, cm
+from osgeo import gdal
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.path as path
-import coral_plotter as plotter
+import xarray as xr
+# import coral_plotter as plotter
+import pdb
 
 
-basedir = '/0work/projects/coral/'
-basedir = '/home/pkalmus/projects/coral/'
-do_plot = True
 
+basedir = '/home/pkalmus/projects/coral2/'
+olddir = '/home/pkalmus/projects/coral/'
+datadir = '/raid8/pkalmus/data/coral/data/location/14_001_WCMC008_CoralReefs2018_v4_1/01_Data/'
 lat_extent = 35.5
-#lat_extent = 0.5
-#climatology_start_year = 1985 #earliest is 1985
-#climatology_end_year = 2008 #latest is 2012
+lat_extent = [-34.3, 32.525]
 
-#gridspace = 0.5
-#geolimit=([-35.5,35.5], [0,360])
-gridspace = 0.06 # need to use the clim_ds grid space
-geolimit=([-35.5,35.5], [0.5,355.5])
-#geolimit=([-40,-2], [100,170]) # Australia
+raster = datadir+'/output1.tif'
+raster = datadir+'/output1at.tif'
+raster = datadir+'/output1te.tif'
+raster = datadir+'/output1km.tif'
 
-#def get_mmm_clim(point):
-#    '''
-#    Tried commenting this function out and just returning an integer; it's not the slow part.
-#    '''
-#    mylon = point[0]
-#    mylat = point[1]
-#    myclim = clim_ds.sel(lat=slice(mylat-gridspace/2, mylat+gridspace/2), lon=slice(mylon-gridspace/2, mylon+gridspace/2))
-#    if np.nanmean(myclim.reef_mask.values) > 0:
-#        myclim = myclim.where(myclim.reef_mask==1, drop=True) 
-#        clim_vect=[]
-#        mmm_vect =[]
-#        for thislat in myclim.lat.values:
-#            for thislon in myclim.lon.values:
-#                thisind = myclim.sel(lat=thislat, lon=thislon).mmm_month.values - 1 # goes from 0 to 12, but I think 0 indicates fill val??
-#                if ~np.isnan(thisind):
-#                    mmm = myclim.sel(lat=thislat, lon=thislon).clim_monthly.values[int(thisind)]
-#                    mmm_vect.append(mmm)
-#                    clim = np.mean(myclim.sel(lat=thislat, lon=thislon).clim_monthly.values) # take the mean of all 12 months
-#                    clim_vect.append(clim)
-#        return np.mean(mmm_vect), np.mean(clim_vect)
-#    else:
-#        return np.nan, np.nan
+ds = gdal.Open(raster) # osgeo.gdal.Dataset
 
-def has_reef(mylon, mylat):
-    #myreefs = clim_ds.sel(lat=slice(mylat-gridspace/2.0, mylat+gridspace/2), lon=slice(mylon-gridspace/2.0, mylon+gridspace/2))
-    myreefs = clim_ds.sel(lat=slice(mylat-gridspace/2.0, mylat+gridspace/2.0), lon=slice(mylon-gridspace/2.0, mylon+gridspace/2.0)) # can't use "tolerance" with slice.
-    return np.nanmean(myreefs.reef_mask.values) > 0.0
+trans = ds.GetGeoTransform() # https://gdal.org/api/gdaldataset_cpp.html#_CPPv4N11GDALDataset15GetGeoTransformEPd
+dat = ds.ReadAsArray() # 2D numpy array, (6682, 36001)
 
-# read in climatology. want MMM for each location. 
-clim_file = basedir + 'data/climatology/noaa_crw_thermal_history_climatology.nc'
-clim_ds  = xr.open_dataset(clim_file) # lon: -180 to 180. lat: 34.14 to -35.27 (so in reverse order... be careful.)
-#clim_ds = clim_ds.assign_coords(lon=((clim_ds.lon + 360) % 360)).sortby('lon')
-clim_ds = clim_ds.assign_coords(lat=clim_ds.lat).sortby('lat') # fixed
-#clim_ds = clim_ds.sel(lat=slice(-1*lat_extent, lat_extent))
+locs = np.where(dat == 1)
+output = np.zeros((len(locs[0]),2))
+for i in range(len(locs[0])): 
+    y = locs[0][i]
+    x = locs[1][i]
+    output[i,0] = trans[0] + (x+0.5) * trans[1]
+    output[i,1] = trans[3] + (y+0.5) * trans[5]
+
+print(output.shape)
+
+# dump output in csv file
+csv_name = datadir+'locationsWCMCv41.csv'
+np.savetxt(csv_name, output, delimiter=',', fmt='%1.3f')
+print(csv_name)
 
 # start making the new dataset with the reef_mask
-mur_file = basedir + 'data/mur/201912-JPL-L4-SSTfnd-MUR_monthly-GLOB-fv04.2.nc'
+mur_file = olddir + 'data/mur/201912-JPL-L4-SSTfnd-MUR_monthly-GLOB-fv04.2.nc'
 mur_ds  = xr.open_dataset(mur_file)
 # drop unneeded variables
 mur_ds = mur_ds.drop('monthly_mean_sst')
 mur_ds = mur_ds.drop('monthly_std_sst')
-mur_ds = mur_ds.sel(lat=slice(-1*lat_extent, lat_extent))
+mur_ds = mur_ds.sel(lat=slice(lat_extent[0], lat_extent[1]))
 
-# make reef_mask, initialized to zeros.
-null_data = np.empty((mur_ds.dims['lat'], mur_ds.dims['lon'])) # already initialized with zeros 
-reef_mask_da = xr.DataArray(null_data, coords=[mur_ds.coords['lat'], mur_ds.coords['lon']], dims=['lat', 'lon'])  
+wcmc_ds = xr.DataArray(dat, name='reef_mask', coords=[mur_ds.coords['lat'], mur_ds.coords['lon']], dims=['lat', 'lon'])  
 
+# this was the old way, see coral/src/python/reef_locations.py
+# # make reef_mask, initialized to zeros.
+# null_data = np.empty((mur_ds.dims['lat'], mur_ds.dims['lon'])) # already initialized with zeros 
+# reef_mask_da = xr.DataArray(null_data, coords=[mur_ds.coords['lat'], mur_ds.coords['lon']], dims=['lat', 'lon'])  
+# # instead of loopoing through the 0.01 resolution data, which would take about 24 hours, a nearest neighbor interp
+# interpolated = wcmc_ds.interp_like(reef_mask_da, method='nearest')
 
-# instead of loopoing through the 0.01 resolution data, which would take about 24 hours, a nearest neighbor interp
-interpolated = clim_ds.reef_mask.interp_like(reef_mask_da, method='nearest')
-
-# save netcdf
-netcdf_name = 'coral_locations_mur.nc'
+# dump output in netcdf file
+netcdf_name = datadir+'locationsWCMCv41.nc'
 #encoding cuts file size from 2 GB to 245 MB. encoding lat and lon to float32 prevents extra decimal garbage.
-interpolated.to_netcdf(netcdf_name, encoding={'reef_mask': {'dtype': 'int8', '_FillValue': -9999}, 'lat': {'dtype': 'float32', '_FillValue': -9999}, 'lon': {'dtype': 'float32', '_FillValue': -9999} } )  
+wcmc_ds.to_netcdf(netcdf_name, encoding={'reef_mask': {'dtype': 'int8', '_FillValue': -9999}, 'lat': {'dtype': 'float32', '_FillValue': -9999}, 'lon': {'dtype': 'float32', '_FillValue': -9999} } )  
 print(netcdf_name)
 
-# diagnostic plots. note the 0.01 resolution plot takes a few minutes.
-print('sanity check plots...')
-plotter.plot_data_array(interpolated.sel(lat=slice(-40,2), lon=slice(100,170) ), 'reef_grid_mur.png')
-plotter.plot_data_array(clim_ds.reef_mask.sel(lat=slice(-40,2), lon=slice(100,170) ), 'reef_grid_clim.png')
+#plotter.scatter(output[:,0], output[:,1], 'test.png', c=np.ones(output.shape[0]), marker_relsize=0.1, figsize=(15,5), cbar_fraction=0.008, cbar_orientation='vertical',fontsize=19)
 
 
-
-
+pdb.set_trace()
