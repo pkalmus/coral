@@ -1,0 +1,14 @@
+reef_locations.py: Run once at beginning of analysis, to create 1 km reef locations from UNEP-WCMC shapefile.
+/raid8/pkalmus/data/coral/data/location/14_001_WCMC008_CoralReefs2018_v4_1/01_Data/locationsWCMCv41.nc
+/raid8/pkalmus/data/coral/data/location/14_001_WCMC008_CoralReefs2018_v4_1/01_Data/locationsWCMCv41.csv
+Note that:
+ + we do NOT use "all touched" (a gdal_rasterize option)
+ + lat_extent = [-34.3, 32.525]
+ + there are 125479 reef locations (again, w/o all touched)
+ + Dimensions:    (lat: 6683, lon: 36000)
+
+regrid_bcdp.py: Get "best" member from each model group, determine mean resolution for each model, and regrid to a single reasonable resolution. Time homogenize. 
+
+
+
+

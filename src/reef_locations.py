@@ -3,29 +3,25 @@
 """
 conda activate geo_env
 
+RUN GDAL_RASTERIZE FIRST. (Unless the required .tif file already exists.)
+
 This code came from Phil Broderick strategy he described in 2022/2/03 email.
 
 The shapefile (and generated raster files) are in:
 /raid8/pkalmus/data/coral/data/location/14_001_WCMC008_CoralReefs2018_v4_1/01_Data
 
-
-To create the .tif file:
+To create the .tif file BEFORE RUNNING THIS PYTHON CODE:
 gdal_rasterize WCMC008_CoralReef2018_Py_v4_1.shp output1km.tif -te -180.005 -34.305 179.995 32.525 -tr 0.01 0.01 -burn 1
 (125479, 2)
 
-all touched:
+all touched: (DECIDED NOT TO DO THIS)
 gdal_rasterize WCMC008_CoralReef2018_Py_v4_1.shp output1at.tif -tr 0.01 0.01 -burn 1 -at
 (421207, 2)
 
 Also, note that the gdal_rasterize step could probably also be done within this .py script
 using osgeo.gdal.RasterizeLayer, which also has options like 'ALL_TOUCHED=TRUE'
 
-
-Questions:
-    1. Do I need -at (all touched)? Why so many fewer than Adele (150K vs. 250K)?
-    2. Can I rasterize onto the MUR grid directly? 
-
-
+Here is what ogrinfo says about the shapefile set:
 (geo_env) [pkalmus@weather2 01_Data]$ ogrinfo -so WCMC008_CoralReef2018_Py_v4_1.shp WCMC008_CoralReef2018_Py_v4_1
 INFO: Open of `WCMC008_CoralReef2018_Py_v4_1.shp'
       using driver `ESRI Shapefile' successful.
@@ -51,14 +47,11 @@ GEOGCS["WGS 84",
 @author: pkalmus
 """
 
-
 from osgeo import gdal
 import numpy as np
 import xarray as xr
 # import coral_plotter as plotter
 import pdb
-
-
 
 basedir = '/home/pkalmus/projects/coral2/'
 olddir = '/home/pkalmus/projects/coral/'
@@ -66,9 +59,6 @@ datadir = '/raid8/pkalmus/data/coral/data/location/14_001_WCMC008_CoralReefs2018
 lat_extent = 35.5
 lat_extent = [-34.3, 32.525]
 
-raster = datadir+'/output1.tif'
-raster = datadir+'/output1at.tif'
-raster = datadir+'/output1te.tif'
 raster = datadir+'/output1km.tif'
 
 ds = gdal.Open(raster) # osgeo.gdal.Dataset
@@ -115,6 +105,5 @@ wcmc_ds.to_netcdf(netcdf_name, encoding={'reef_mask': {'dtype': 'int8', '_FillVa
 print(netcdf_name)
 
 #plotter.scatter(output[:,0], output[:,1], 'test.png', c=np.ones(output.shape[0]), marker_relsize=0.1, figsize=(15,5), cbar_fraction=0.008, cbar_orientation='vertical',fontsize=19)
-
 
 pdb.set_trace()
