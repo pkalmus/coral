@@ -10,11 +10,8 @@ regrid_reef
 
 If the regridded concatenated file already exists, continue.
 
-
 Get model outputs using BCDP, regrid to 1x1°, and save on the local file system for regrid_reef.py to digest.
-
 Must use same models for each SSP. All 4 or bust.
-
 Check gr, gr1 as well. (See params file)
 
 Note that none of the “ripf” indices can be omitted.
@@ -23,54 +20,19 @@ Example of a variant_label: if realization_index=2, initialization_index=1, phys
 https://github.com/intake/intake-esm
 https://intake-esm.readthedocs.io/en/latest/
 
-todo: MRI-ESM2-0 585 goes to 2300 and uses cftime.datetime objects for time, instead of datetime64.
-So before concat with da_hist, would need to figure out how to convert to datetime64 or else get xr.concat to do this.
-Otherwise, when attempting to write the netcdf, get ValueError: unable to infer dtype on variable 'time'; xarray cannot serialize arbitrary Python objects
-Fails only for ssp585. The other 3 files are OK. 
 
+SPECIAL CASESS: NOTE: I did this with Xarray 0.16.2. There is a newer version (0.21.1, https://xarray.pydata.org/en/stable/whats-new.html)
+but it was too hard to figure out how to get it installed, as conda is still "broken". I think the newer xarray can serialize DatetimeProlpticGregorian.
+
+ACCESS-CM2_r1i1p1f1_gn_ssp585:
+MRI-ESM2-0_r1i1p1f1_gn_ssp585:
+  Goes to 2300 and uses cftime.DatetimeProlepticGregorian. 
+      fix: use a special slice, save time dimension from 370 to workaround the xarray serialization limitation when saving the netcdf.
   
 todo: AWI-CM-1-1-MR
     MemoryError: Unable to allocate 5.02 TiB for an array with shape (830305, 830305) and data type float64
 
-Note: CMIP6 historical simulation runs from 1850 to 2014.
-
-These models appear to be only available as gr, but do not come up in the intake-ESM search. We will not use them.
-    
-../../data/tos/raw/CMIP6_1x1/tos_Omon_CESM2_historical_ssp126_r1i1p1f1_gr_185001-210012.nc
-../../data/tos/raw/CMIP6_1x1/tos_Omon_CESM2_historical_ssp245_r1i1p1f1_gr_185001-210012.nc
-../../data/tos/raw/CMIP6_1x1/tos_Omon_CESM2_historical_ssp370_r1i1p1f1_gr_185001-210012.nc
-../../data/tos/raw/CMIP6_1x1/tos_Omon_CESM2_historical_ssp585_r1i1p1f1_gr_185001-210012.nc
-
-../../data/tos/raw/CMIP6_1x1/tos_Omon_MRI-ESM2-0_historical_ssp126_r1i1p1f1_gr_185001-210012.nc
-../../data/tos/raw/CMIP6_1x1/tos_Omon_MRI-ESM2-0_historical_ssp245_r1i1p1f1_gr_185001-210012.nc
-../../data/tos/raw/CMIP6_1x1/tos_Omon_MRI-ESM2-0_historical_ssp370_r1i1p1f1_gr_185001-210012.nc
-../../data/tos/raw/CMIP6_1x1/tos_Omon_MRI-ESM2-0_historical_ssp585_r1i1p1f1_gr_185001-210012.nc
-
-
-Here's the intake-ESM search on 8/29/2020. We will use them.
-(geo_env) [pkalmus@weather2 python]$ m models_gr1.txt 
-INM-CM4-8 r1i1p1f1 seems OK (runs through regrid_reef)
-INM-CM5-0 r1i1p1f1
-
-(geo_env) [pkalmus@weather2 python]$ m models_gr.txt. 
-CESM2-WACCM r1i1p1f1   HAS GN. Could use as a check on the regridding. would need to keep out of means.
-GFDL-ESM4 r1i1p1f1     HAS GN. Could use as a check on the regridding.  
-KACE-1-0-G r1i1p1f1 error getting historical run
-KACE-1-0-G r2i1p1f1 note: latitude is NOT on 0.5 degree grid.
-KACE-1-0-G r3i1p1f1 note: latitude is NOT on 0.5 degree grid.
-
-
-So as of 8/29 there are 4 non-gn models available, two gr1 and two gr.
-INM-CM4-8 r1i1p1f1
-INM-CM5-0 r1i1p1f1
-KACE-1-0-G r2i1p1f1
-KACE-1-0-G r3i1p1f1
-
-BE SURE TO DELETE:
-CESM2-WACCM r1i1p1f1 gr
-GFDL-ESM4 r1i1p1f1 gr
-KACE-1-0-G r2i1p1f1 gr
-KACE-1-0-G r3i1p1f1 gr
+Note: CMIP6 historical simulation runs from 1850 to 2014.    
 
 ========================
 3/7/2021.
@@ -90,7 +52,6 @@ wind speed (sfcWind))
 @author: pkalmus
 """
 
-
 import xarray as xr
 import numpy as np
 import pdb
@@ -104,7 +65,6 @@ import os.path
 import logging
 logging.basicConfig(filename='run.log',level=logging.WARNING)
 
-
 # read in user params
 import importlib
 paramfile = sys.argv[1]   
@@ -113,7 +73,6 @@ projectdir = params.projectdir
 tosrunname = params.tosrunname
 basedir = params.basedir
 modellist_filename = params.modellist_filename
-modelres_filename = params.modelres_filename
 scenarios = params.scenarios
 dryRun = params.dryRun
 oneMember = params.oneMember
@@ -126,7 +85,9 @@ if cmip_var=='tos':
 else:
     table = 'Amon'
 
-outdir = basedir+'data/%s/%s/raw/' % (cmip_var, tosrunname) # note: "data" is a symlink to /raid8/pkalmus/data/coral/data/
+do_continue = True
+
+outdir = basedir+'data/%s/coral2/%s/raw/' % (cmip_var, tosrunname) # note: "data" is a symlink to /raid8/pkalmus/data/coral/data/
 
 experiments = scenarios.copy()
 experiments.insert(0, 'historical') 
@@ -136,22 +97,16 @@ subprocess.call(sysStr, shell=True)
 
 # this is also bcdp.constants.DEFAULT_INTAKE_ESM_CAT; hardcode here in case it changes unexpectedly in bcdp
 DEFAULT_INTAKE_ESM_CAT = 'https://raw.githubusercontent.com/NCAR/intake-esm-datastore/master/catalogs/pangeo-cmip6.json'
-
 col = intake.open_esm_datastore(DEFAULT_INTAKE_ESM_CAT)
-#uni_dict = col.un ique(["source_id"])
-#pprint.pprint(uni_dict, compact=True)
 
 modellistfile = open(modellist_filename, 'w')
-modelresfile = open(modelres_filename, 'w')
+modelresfile = open('model_resolutions.txt', 'w')
+time_ACCESS_CM2_r1i1p1f1_gn_ssp585 = None # workaround, see script-level comments
+time_MRI_ESM2_0_r1i1p1f1_gn_ssp370 = None # workaround, see script-level comments
 for grid in grids:
     # grid_label: gn, gr, gr1. table_id: Oday 245 Omon 526. member_id: 68!!
     query = dict(variable_id=[cmip_var], table_id=[table], grid_label=[grid], experiment_id=experiments) # 18
     col_subset = col.search(require_all_on=["source_id"], **query)
-    
-    #myset = col_subset.df.groupby("source_id")[["experiment_id"]].nunique()
-    #df = col_subset.df.groupby("source_id")[["experiment_id"]]
-    #print(len(myset))
-    #print(myset)
         
     sources = col_subset.unique()["source_id"]["values"]
     print(sources)
@@ -168,21 +123,36 @@ for grid in grids:
     nsource = 0
     nmember = 0
     for mysource in sources:
-        print('----------------------------------------------------------')
-        print('starting %s %s' % (mysource, grid))
-        print('----------------------------------------------------------')
-        
-        # # still need these continues... if a problem later, debug the noError thing below.
-        # if mysource=='MRI-ESM2-0':
-        #     print('***************** problem source id %s' % (mysource))
+        source_grid = mysource+'_'+grid
+
+        # if mysource!='BCC-CSM2-MR' and mysource!='INM-CM5-0':
         #     continue
-    
-        if mysource=='AWI-CM-1-1-MR': # still has some kind of memory issue (2022/03/06), but the try/catch handles
-            print('***************** problem source id %s' % (mysource))
+
+        print('----------------------------------------------------------')
+        print('starting %s' % (source_grid))
+        print('----------------------------------------------------------')
+ 
+        if source_grid == 'CESM2-WACCM_gr': 
+            print('GR version of GN model: %s. continuing' % (source_grid))
+            continue
+        if source_grid == 'GFDL-ESM4_gr':
+            print('GR version of GN model: %s. continuing' % (source_grid))
+            continue
+        if source_grid == 'MIROC-ES2L_gr1': 
+            print('GR version of GN model: %s. continuing' % (source_grid))
+            continue
+        if source_grid == 'MRI-ESM2-0_gr': 
+            print('GR version of GN model: %s. continuing' % (source_grid))
             continue
 
-        #Note: KACE-1-0-G has 3 gr members, none of which are OK; one throws an error below, and two would need regridding due to non-0.5-degree latitude.
+        if mysource=='AWI-CM-1-1-MR': # 25 km model, too much memory issue (2022/02/06). try/catch handles
+            print('***************%s, *** MemoryError: Unable to allocate 5.02 TiB for an array with shape (830305, 830305) and data type float64' % (mysource))
+            continue
        
+        if mysource=='IITM-ESM': # SSP370 is missing 2099 (ends in 2088) (2022/02/08)
+            print('***************%s, SSP370 is missing 2099 (ends in 2088)' % (mysource))
+            continue        
+        
         # get all member_id that have all experiments
         query = dict(source_id=mysource, experiment_id=experiments, variable_id=cmip_var, table_id=table, grid_label=grid)
         col_subset = col.search(require_all_on=["member_id"], **query) # require_all_on means each member_id needs to have all of the above experiments
@@ -203,8 +173,7 @@ for grid in grids:
             print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
             noError = True # for some reason the noError isn't working... don't count on it and fix when necessary. for now, skipping known problem groups above.
             if not dryRun:
-                # see if all the scenario files have created and if so continue
-                # doing this here so we can allow getting "historical" only once, below, to save time
+                # see if all the scenario files have created and if so continue. this facilitates fetching "historical" only once, below
                 allScenariosMade = True
                 for scenario in scenarios:
                     outfilename = outdir+mysource+'_'+mymember+'_'+grid+'_'+scenario+'.nc'
@@ -215,7 +184,8 @@ for grid in grids:
                     print('all scenario files already here for %s %s %s' % (mysource, mymember, grid))
                     modellistfile.write('%s %s %s\n' % (mysource, mymember, grid))
                     nmember+=1
-                    continue
+                    if do_continue:
+                        continue
     
                 # get historical
                 query = dict(source_id=mysource, member_id=mymember, experiment_id='historical', variable_id='tos', table_id='Omon', grid_label=grid)
@@ -225,14 +195,9 @@ for grid in grids:
                     logging.error('regrid_bcdp: source %s member %s error %s' % (mysource, mymember, str(e))) 
                     traceback.print_exc()
                     noError = False
-                    continue
-
-                # print native resolution. get mean of lats at one longitude
+                    if do_continue:
+                        continue
                 mymod = ens.first
-                # pdb.set_trace()
-                # ds = mymod.sel(y=np.round(np.mean(mymod.y.values)))
-                # ds = mymod.sel(y=np.median(mymod.y.values))
-                # meanlon = np.mean(np.diff(ds.lon.values))
                 
                 nx = len(mymod.x.values)
                 londiff = np.abs(np.diff(mymod.lon.values[40,:]))
@@ -244,54 +209,55 @@ for grid in grids:
                 print('\n\n****************%s %s %s %1.2f %1.2f %i \n\n' % (mysource, mymember, grid, meanlondiff1, meanlondiff2, nx))
                 modelresfile.write('%s %s %s %1.2f %1.2f %i \n' % (mysource, mymember, grid, meanlondiff1, meanlondiff2, nx))
                 modelresfile.flush()
-                
-                # continue # comment out if you just want to get resolution
-                
+                                
                 da_hist = ens.regrid(output_grid=grid_ds, backend='esmf', method='bilinear', ignore_degenerate=True).normalize_times().first
-                
-                # if grid=='gn':
-                #     da_hist = ens.regrid(output_grid=grid_ds, backend='esmf', method='bilinear', ignore_degenerate=True).first
-                # else:
-                #     da_hist = ens.first
                 
                 # do the SSP stitching, regridding, and homogenization
                 for scenario in scenarios:
+                        identifier = mysource+'_'+mymember+'_'+grid+'_'+scenario
                         print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-                        print('starting %s %s %s %s' % (mysource, mymember, scenario, grid))
+                        print('starting %s ' % (identifier))
                         print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-                        outfilename = outdir+mysource+'_'+mymember+'_'+grid+'_'+scenario+'.nc'
+                        outfilename = outdir+identifier+'.nc'
                         if os.path.exists(outfilename):
                             print('%s already exists, continuing.' % (outfilename))
-                            continue
+                            if do_continue:
+                                continue
                         try:
                             # get one model, stitch together with ssp
                             query = dict(source_id=mysource, member_id=mymember, experiment_id=scenario, variable_id=cmip_var, table_id=table, grid_label=grid)
                             ens = bcdp.load_intake_esm(query, catfile=DEFAULT_INTAKE_ESM_CAT)
 
                             da = ens.regrid(output_grid=grid_ds, backend='esmf', method='bilinear', ignore_degenerate=True).normalize_times().first
-                            
-                            # if grid=='gn':
-                            #     da = ens.regrid(output_grid=grid_ds, backend='esmf', method='bilinear', ignore_degenerate=True).normalize_times().first
-                            # else:
-                            #     da = ens.first
                                 
                             da_concat = xr.concat([da_hist, da], 'time')
                             da_concat.name = cmip_var
+                            print(np.max(da_concat.time.values))
 
                             # from 1970 to 2100. cut short any that go to 2300, such as MRI-ESM2-0 585 and CanESM5
-                            # the ocean heat signal really started in 1970
-                            da = da.sel(time=slice('1970', '2100'))
-
-                            if grid=='gn':  
-                                da_concat = da_concat.assign_coords(lon=((da_concat.lon + 360) % 360)).sortby('lon') # put into 0, 360.
-                                da_concat = da_concat.rename({'x': 'lon','y': 'lat'}) # must reassign to da_concat
+                            # the ocean heat signal really started in 1970                
+                            if identifier=='ACCESS-CM2_r1i1p1f1_gn_ssp370':
+                                da_concat = da_concat.sel(time=slice('1970', '2099'))
+                                time_ACCESS_CM2_r1i1p1f1_gn_ssp370 = da_concat.time 
+                                print('@@@@@@@@@SPECIAL CASE: storing time from ACCESS-CM2_r1i1p1f1_gn_ssp370 for use with ssp585.')
+                            elif identifier=='ACCESS-CM2_r1i1p1f1_gn_ssp585': # goes to 2300 and uses this funky calendar
+                                da_concat = da_concat.sel(time=slice(cftime.DatetimeProlepticGregorian(1970,1,1), cftime.DatetimeProlepticGregorian(2099,12,15)))
+                                da_concat = da_concat.assign_coords(time=time_ACCESS_CM2_r1i1p1f1_gn_ssp370.copy()) 
+                                print('@@@@@@@@@SPECIAL CASE: ACCESS-CM2_r1i1p1f1_gn_ssp585.')
+                            elif identifier=='MRI-ESM2-0_r1i1p1f1_gn_ssp370':
+                                da_concat = da_concat.sel(time=slice('1970', '2099'))
+                                time_MRI_ESM2_0_r1i1p1f1_gn_ssp370 = da_concat.time 
+                                print('@@@@@@@@@SPECIAL CASE: storing time from MRI-ESM2-0_r1i1p1f1_gn_ssp370 for use with ssp585.')
+                            elif identifier=='MRI-ESM2-0_r1i1p1f1_gn_ssp585': # goes to 2300 and uses this funky calendar
+                                da_concat = da_concat.sel(time=slice(cftime.DatetimeProlepticGregorian(1970,1,1), cftime.DatetimeProlepticGregorian(2099,12,15)))
+                                da_concat = da_concat.assign_coords(time=time_MRI_ESM2_0_r1i1p1f1_gn_ssp370.copy()) 
+                                print('@@@@@@@@@SPECIAL CASE: MRI-ESM2-0_r1i1p1f1_gn_ssp585.')                   
                             else:
-                                da_concat = da_concat.drop(labels=['lon', 'lat'])
-                                da_concat = da_concat.rename({'x': 'lon','y': 'lat'}) # must reassign to da_concat
-                                da_concat = da_concat.assign_coords(lon=((da_concat.lon + 360) % 360)).sortby('lon') # put into 0, 360.
+                                da_concat = da_concat.sel(time=slice('1970', '2099'))
 
-                                #da_concat = ens.regrid(output_grid=grid_ds, backend='scipy', method='linear').normalize_times(assume_gregorian=True).bundle('CMIP6').first
-                                
+                            da_concat = da_concat.assign_coords(lon=((da_concat.lon + 360) % 360)).sortby('lon') # put into 0, 360.
+                            da_concat = da_concat.rename({'x': 'lon','y': 'lat'}) # must reassign to da_concat
+
                             # save netcdf
                             da_concat.to_netcdf(outfilename) 
                             print(outfilename) 
@@ -312,11 +278,9 @@ for grid in grids:
             nmember+=1
         nsource+=1
 modellistfile.close()
-
+print(modellist_filename)
 print('IF DRYRUN, members with errors (the errors have not been actualized) will still be written to the list.')
-print('NOW DELETE GR,GR1 DUPLICATES FROM LIST!')
+print('regrid_bcdp.py should have checks to make sure unusable models are not included in the model list. But be careful...')
 print('done.')
 
-# CAMS-CSM1-0 has an issue. *** ValueError: conflicting sizes for dimension 'time': length 3000 on 'tos' and length 3012 on 'time'
-# master_time has length 3012. this dude has 3000.
 

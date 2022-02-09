@@ -1,3 +1,27 @@
+WHERE various files come from:
+mur_mmm.nc			was made by Mike Chin? or by me, separately?
+locationsWCMCv41.nc		reef_locations.py (was: coral_locations_mur.nc)
+locationsWCMCv41.csv		
+gridded (raw) GCMs		regrid_bcdp.py
+models.txt			
+reef_locations_coarse.csv 1294	reef_locations_coarse.py (was: reef_grid_1x1.txt)
+nn_locations_coarse.csv	  1790				 (was: nn_grid_1x1.txt)
+reef+nn GCMs, HadISST		regrid_reef.py (uses reef_grid_coarse.csv and nn_grid_coarse.csv)
+models_reef.txt			
+
+
+
+
+HadISST. Accessed 2022/02/07 from https://www.metoffice.gov.uk/hadobs/hadisst/data/download.html
+/raid8/pkalmus/data/coral/data/tos/coral2/obs/HadISST_sst_202110.nc
+/home/pkalmus/projects//coral2/data/tos/coral2/dev/reef/HadISST_sst_202110_reef.nc
+number of reefs & nn: 3084
+number of nan: 461
+(Note: Zeke Hausfather says HadISST is best for 1x1.)
+
+
+THE PYTHON scripts, in order:
+
 reef_locations.py: Run once at beginning of analysis, to create 1 km reef locations from UNEP-WCMC shapefile.
 /raid8/pkalmus/data/coral/data/location/14_001_WCMC008_CoralReefs2018_v4_1/01_Data/locationsWCMCv41.nc
 /raid8/pkalmus/data/coral/data/location/14_001_WCMC008_CoralReefs2018_v4_1/01_Data/locationsWCMCv41.csv
@@ -7,7 +31,11 @@ Note that:
  + there are 125479 reef locations (again, w/o all touched)
  + Dimensions:    (lat: 6683, lon: 36000)
 
-regrid_bcdp.py: Get "best" member from each model group, determine mean resolution for each model, and regrid to a single reasonable resolution. Time homogenize. 
+reef_locations_coarse.py: create reef_grid_coarse.csv and nn_grid_coarse.csv, to regrid and ravel GCMs to reefs
+
+regrid_bcdp.py: Get "best" member from each model group, determine mean resolution for each model, and regrid to a single reasonable resolution. Time homogenize. Produces models.txt. Also examines resolutions of the models.
+
+regrid_reef.py: Take gridded GCM and HadISST files, and produce "ravel" versions (with single index) that only include reef locations and nn locations. Produces models_reef.txt.
 
 
 

@@ -9,24 +9,23 @@ If "Memory Error" make sure geoenv
 
 """
 
-runname = 'dev'    # where the mean coarse files are, and fine files.
+runname = 'main'    # where the mean coarse files are, and fine files.
 tosrunname = runname
 
 projectdir = '/home/pkalmus/projects/'
 basedir = projectdir+'/coral2/'
 srcdir = basedir+'src/'
 
-cmip_var = 'tas' # tos
-cmip_var = 'tasmax' # tos
+cmip_var = 'tas'
+cmip_var = 'tasmax'
 cmip_var = 'tos'
-modellist_filename = srcdir+'models_%s_%s.txt' % (cmip_var, runname)
-modelres_filename = srcdir+'model_resolutions_%s_%s.txt' % (cmip_var, runname)
+modellist_filename = srcdir+'models.txt'
 
 scenarios = ['ssp126', 'ssp245', 'ssp370', 'ssp585'] # 29 models
 #scenarios = ['ssp126', 'ssp370', 'ssp585'] 
-#scenarios = ['ssp245', 'ssp370', 'ssp585']
-#scenarios = ['ssp585']
-#scenarios = ['ssp370']
+#scenarios = ['ssp370', 'ssp585']
+#scenarios = ['ssp585'] # 41 models 2022/2/8
+#scenarios = ['ssp370'] # 37 models 2022/2/8
 #scenarios = ['ssp245']
 #scenarios = ['ssp126']
 
@@ -43,18 +42,14 @@ oneMember = True # only use the first member with all scenarios per model. False
 daylistfilename = 'models_daily.txt'
 interpolate_method = 'bilinear' # 'bilinear', 'conservative', 'patch', 'nearest_s2d', 'nearest_d2s.'
 regrid_resolution = 1.0
-grids = ['gn', 'gr', 'gr1']
-# grids = ['gr1', 'gr']
-# grids = ['gr']
-#grids = ['gn', 'gr1'] # note: as of 8/29, there are two gr1 models, and two gr models available, but the gr models also have gn versions.
-
+grids = ['gn', 'gr', 'gr1'] # regrid_bcdp has checks to prevent against redundant gr when gn exists. but this could change. 
 
 #############################################################
 # regrid_reef only
 #############################################################
-year_cutoff = 1915 # throw out all years before this
+#year_cutoff = 1915 # throw out all years before this
 # important that lon/lat geolimit is no smaller than in reef_locations.py.  ??????
-geolimit=([-35.5,35.5], [0,360]) # NOTE: I don't think geolimiting for lon is implemented yet except for #2. also should be lon, lat.
+#geolimit=([-35.5,35.5], [0,360]) # NOTE: I don't think geolimiting for lon is implemented yet except for #2. also should be lon, lat.
 #geolimit=([-40,-2], [100,170]) # Australia
 
 
