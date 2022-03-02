@@ -57,16 +57,14 @@ def plot_data_array(da, filename):
     print(filename)
     plt.close()
 
-def image(lat, lon, data, filename, vmin=None, vmax=None, extent=None, figsize=None, cbar_orientation='vertical', cbar_fraction=None, marker_relsize=1, cmap='jet', draw_labels=True):
+def image(lat, lon, data, filename, vmin=None, vmax=None, extent=None, figsize=None, cbar_orientation='vertical', cbar_fraction=None, cmap='jet', draw_labels=True):
     '''
     For when lon, lat are gridded.
 
     Parameters
     ----------
-    lon : TYPE
-        DESCRIPTION.
-    lat : TYPE
-        DESCRIPTION.
+    lon : gridded, same size as data
+    lat : gridded, same size as data
     data : TYPE
         DESCRIPTION.
     filename : TYPE
@@ -81,7 +79,7 @@ def image(lat, lon, data, filename, vmin=None, vmax=None, extent=None, figsize=N
         figsize=(15,5)
     plt.figure(figsize=figsize)
     ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=180.0))
-    ax.add_feature(cartopy.feature.LAND)
+    #ax.add_feature(cartopy.feature.LAND)
     ax.coastlines(resolution='10m') #Currently can be one of “110m”, “50m”, and “10m”.    
 
     sc = plt.pcolormesh(lat, lon, data, cmap=cmap, edgecolor='', transform=ccrs.PlateCarree(), vmin=vmin, vmax=vmax) #, cmap=maskcmap, vmin=allmin, vmax=allmax, edgecolor='') 

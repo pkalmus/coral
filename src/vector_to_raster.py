@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Must run as GEO
+conda activate geo_env
 
 Take the "vector" format (one-dimensional index) output files and put them
 on a lat-lon grid.

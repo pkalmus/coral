@@ -43,7 +43,7 @@ import coral_plotter as plotter
 
 basedir = '/0work/projects/coral/'
 basedir = '/home/pkalmus/projects/coral/'
-finelocation_file = '/raid8/pkalmus/data/coral/data/location/14_001_WCMC008_CoralReefs2018_v4_1/01_Data/locationsWCMCv41.nc'
+finelocation_file = '/raid8/pkalmus/data/coral/data/location/14_001_WCMC008_CoralReefs2018_v4_1/01_Data/locationsWCMCv41_gdal.nc'
 coarselocation_dir = '/raid8/pkalmus/data/coral/data/location/coarse/'
 
 do_plot = False # be sure to use geo_env if you set to True!
@@ -93,6 +93,8 @@ def has_reef(point):
     return np.nanmean(myreefs.reef_mask.values) > 0.0
 
 fine_reef_ds = xr.open_dataset(finelocation_file)
+# change from -180 to 180, to 0 to 360.
+fine_reef_ds = fine_reef_ds.assign_coords(lon=((fine_reef_ds.lon + 360) % 360)).sortby('lon')
 
 # climatology_start_year = 1985 #earliest is 1985
 # climatology_end_year = 2008 #latest is 2012
@@ -110,6 +112,7 @@ gridlon = np.arange(geolimit[1][0], geolimit[1][1]+gridspace, gridspace)
 gridlat = np.arange(geolimit[0][0], geolimit[0][-1]+gridspace, gridspace)
 pre_grid = np.fliplr(cartesian((gridlat, gridlon))) # cartesian orders by its first argument. this gives order the same as the indexed models in regrid_reef.py
 
+
 # collect the points that have reefs
 post_grid = None
 for point in pre_grid:
@@ -122,11 +125,13 @@ for point in pre_grid:
 # write out reef locations
 lat = post_grid[:,1]
 lon = post_grid[:,0]
-if do_plot:
-    plotter.scatter(lon, lat, coarselocation_dir+'reef_location_coarse.png')
+
+plotter.scatter(lon, lat, coarselocation_dir+'reef_location_coarse.png')
+
 reef_file = coarselocation_dir+'reef_location_coarse.csv'
 np.savetxt(reef_file, post_grid, fmt='%1.2f')
 print(reef_file)
+
 
 # collect the points that are adjacent to reef points
 # it's adjacent if the abs. min. difference of the nearest point for both lat and lon is 1 or 0, but not both 0.
@@ -145,8 +150,8 @@ for point in pre_grid:
 # write out nn locations
 lat = nn_grid[:,1]
 lon = nn_grid[:,0]
-if do_plot:
-    plotter.scatter(lon, lat, coarselocation_dir+'nn_location_coarse.png')
+
+plotter.scatter(lon, lat, coarselocation_dir+'nn_location_coarse.png')
 nn_file = coarselocation_dir+'nn_location_coarse.csv'
 np.savetxt(nn_file, nn_grid, fmt='%1.2f')
 print(nn_file)

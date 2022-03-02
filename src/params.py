@@ -15,6 +15,7 @@ tosrunname = runname
 projectdir = '/home/pkalmus/projects/'
 basedir = projectdir+'/coral2/'
 srcdir = basedir+'src/'
+figdir = srcdir+'fig/' # for testplots
 
 cmip_var = 'tas'
 cmip_var = 'tasmax'
