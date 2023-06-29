@@ -101,7 +101,8 @@ def image(lat, lon, data, filename, vmin=None, vmax=None, extent=None, figsize=N
     plt.close()
         
     
-def scatter(lon, lat, filename, c=None, vmin=None, vmax=None, extent=None, figsize=None, cbar=True, cbar_orientation='horizontal', cbar_fraction=None, marker_relsize=1, cmap='jet_r', draw_labels=True, ticksize=None, fontsize=None):
+def scatter(lon, lat, filename, c=None, vmin=None, vmax=None, extent=None, figsize=None, cbar=True, cbar_orientation='horizontal', 
+            cbar_fraction=None, marker_relsize=1, cmap='jet_r', draw_labels=True, ticksize=None, fontsize=None, title=None):
     '''
     
 
@@ -175,6 +176,7 @@ def scatter(lon, lat, filename, c=None, vmin=None, vmax=None, extent=None, figsi
     if fontsize is not None:
         plt.rcParams.update({'font.size': fontsize})
     ax.grid(linewidth=1, color='gray', alpha=0.6)
+    ax.set(title=title)
 
     plt.savefig(filename)
     print(filename)

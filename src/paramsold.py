@@ -3,32 +3,48 @@
 """
 conda activate geo_env
 
-Holds the parameters for stages of the coral2 analysis.
+Holds the parameters for stages of the coral analysis.
 
 If "Memory Error" make sure geoenv
 
 """
 
-runname = 'main'    # where the mean coarse files are, and fine files.
-tosrunname = runname
+tosrunname = 'nature' # runname where the tos files are in, and reef tos files.
+runname = 'nature'    # where the mean coarse files are, and fine files.
+# runname = 'flat'
+# runname = 'onemodel'
 
+#projectdir = '/0work/projects/'
 projectdir = '/home/pkalmus/projects/'
-basedir = projectdir+'/coral2/'
-srcdir = basedir+'src/'
-figdir = srcdir+'fig/' # for testplots
+basedir = projectdir+'/coral/'
+pythondir = basedir+'src/python/'
 
-cmip_var = 'tas'
-cmip_var = 'tasmax'
+cmip_var = 'tas' # tos
+cmip_var = 'tasmax' # tos
 cmip_var = 'tos'
-modellist_filename = srcdir+'models_one_member.txt' # 34 models
+listfilename = pythondir+'models_%s_%s.txt' % (cmip_var, runname)
+listfilename = 'models_nature.txt'
+listfilename = 'models_flat.txt'
 
+# model numbers as of 8/28/2020, for gn only
 scenarios = ['ssp126', 'ssp245', 'ssp370', 'ssp585'] # 29 models
+
 #scenarios = ['ssp126', 'ssp370', 'ssp585'] 
-#scenarios = ['ssp370', 'ssp585']
-#scenarios = ['ssp585'] # 41 models 2022/2/8
-scenarios = ['ssp370'] # 37 models 2022/2/8
+
+# scenarios = ['ssp245', 'ssp370', 'ssp585']
+# scenarios = ['ssp585']
+scenarios = ['ssp370']
 #scenarios = ['ssp245']
 #scenarios = ['ssp126']
+
+#scenarios = ['ssp126', 'ssp245', 'ssp370', 'ssp460', 'ssp585'] # ssp460 cuts models down from 29 to 7, so it's out
+# scenarios = ['ssp126', 'ssp245', 'ssp585'] # 33 models
+# scenarios = [ 'ssp245', 'ssp585'] # 34 models
+# scenarios = ['ssp585'] #35
+# scenarios = ['ssp245'] #34
+# scenarios = ['ssp126'] #34
+# scenarios = ['ssp370'] #31
+# scenarios = ['ssp460'] #7
 
 #############################################################
 # controls whether debugging/verification plots are made
@@ -38,19 +54,24 @@ do_plots = False
 #############################################################
 # regrid_bcdp only
 #############################################################
-dryRun = False # only create model lists, and assess resolutions; do not create the model .nc files
+dryRun = False # only create model lists, not .nc files
 oneMember = True # only use the first member with all scenarios per model. False for coral project, true for GMST.
 daylistfilename = 'models_daily.txt'
+#interpolate_method = 'conservative' # 'bilinear', 'conservative', 'patch', 'nearest_s2d', 'nearest_d2s.'
 interpolate_method = 'bilinear' # 'bilinear', 'conservative', 'patch', 'nearest_s2d', 'nearest_d2s.'
-regrid_resolution = 1.0
-grids = ['gn', 'gr', 'gr1'] # regrid_bcdp has checks to prevent against redundant gr when gn exists. but this could change. 
+
+grids = ['gn', 'gr', 'gr1']
+# grids = ['gr1', 'gr']
+# grids = ['gr']
+#grids = ['gn', 'gr1'] # note: as of 8/29, there are two gr1 models, and two gr models available, but the gr models also have gn versions.
+
 
 #############################################################
 # regrid_reef only
 #############################################################
-#year_cutoff = 1915 # throw out all years before this
-# important that lon/lat geolimit is no smaller than in reef_locations.py.  ??????
-#geolimit=([-35.5,35.5], [0,360]) # NOTE: I don't think geolimiting for lon is implemented yet except for #2. also should be lon, lat.
+year_cutoff = 1915 # throw out all years before this
+# important that lon/lat geolimit is no smaller than in coral_locations.py.
+geolimit=([-35.5,35.5], [0,360]) # NOTE: I don't think geolimiting for lon is implemented yet except for #2. also should be lon, lat.
 #geolimit=([-40,-2], [100,170]) # Australia
 
 
@@ -72,8 +93,8 @@ do_trend = False # for validation, use the trend weighting in weight_trend.py
 # for validation
 meanstart=1980
 meanend=2000
-climstartyear_weight = 1960
-climendyear_weight = 1980
+climstartyear_bma = 1960
+climendyear_bma = 1980
 
 # meanstart=1960
 # meanend=1980
@@ -83,8 +104,8 @@ climendyear_weight = 1980
 # for production. NOTE: BMA is trained on mean annual DHW max values, so it does depend on climatology.
 # meanstart=1995
 # meanend=2015
-# climstartyear_bma = 1975
-# climendyear_bma = 1995
+climstartyear_weights = 1975
+climendyear_weights = 1995
 
 
 #################
@@ -120,7 +141,7 @@ DHW_thresholds = [8,6.423,4.812]
 # DHW_threshold = 7
 # DHW_threshold = 6
 # DHW_threshold = 5
-# DHW_threshold = 9
+DHW_threshold = 8
 # DHW_thresholds = [8]
 # DHW_thresholds = [4.812]
 # DHW_thresholds = [6.423] # 6.423

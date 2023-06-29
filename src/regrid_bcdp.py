@@ -5,6 +5,14 @@
 run on weather2
 conda activate geo_env
 
+
+fix these symlinks:
+    /raid8/pkalmus/data/coral/data/tos/coral2/main/reef
+switch from matlab to .nc
+rerun
+give to Emily
+
+
 regrid_bcdp
 regrid_reef
 
@@ -87,7 +95,7 @@ else:
 
 do_continue = True
 
-outdir = basedir+'data/%s/coral2/%s/raw/' % (cmip_var, tosrunname) # note: "data" is a symlink to /raid8/pkalmus/data/coral/data/
+outdir = basedir+'data/%s/coral2/%s/raw/' % (cmip_var, tosrunname) # note: "data" is a symlink to /raid8/pkalmus/data/coral2/data/
 
 experiments = scenarios.copy()
 experiments.insert(0, 'historical') 
